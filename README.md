@@ -34,6 +34,7 @@ The goal is to deflect bullets as many as possible, and do not lose all 3 health
 
 Sources: 
 https://github.com/ericeschnei/15-466-f20-base1, asset tiles 0-14, and how to organize them in PPU466.
+https://www.sekirothegame.com/, the Sekiro official website.
 
 This game was built with [NEST](NEST.md).
 
