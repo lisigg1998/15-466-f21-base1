@@ -149,38 +149,20 @@ PlayMode::~PlayMode() {
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
-	if (evt.type == SDL_KEYDOWN) {
-		if (evt.key.keysym.sym == SDLK_LEFT) {
-			left.downs += 1;
-			left.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
-			right.downs += 1;
-			right.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_UP) {
-			up.downs += 1;
-			up.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_DOWN) {
-			down.downs += 1;
-			down.pressed = true;
-			return true;
+	if (timer == 0.0f || player_1.health == 0) {
+		return false;
+	}
+
+	if (evt.type == SDL_MOUSEBUTTONDOWN && evt.button.button == SDL_BUTTON_RIGHT) {
+		player_1.rmb_down = 1;
+
+	}
+	else if (evt.type == SDL_MOUSEBUTTONUP && evt.button.button == SDL_BUTTON_RIGHT) {
+		if (player_1.rmb_down == 1) {
+			player_1.jiggle_timer = 0.3f;
 		}
-	} else if (evt.type == SDL_KEYUP) {
-		if (evt.key.keysym.sym == SDLK_LEFT) {
-			left.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
-			right.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_UP) {
-			up.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_DOWN) {
-			down.pressed = false;
-			return true;
-		}
+		player_1.rmb_down = 0;
+		
 	}
 
 	return false;
@@ -188,22 +170,98 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
-	//slowly rotates through [0,1):
-	// (will be used to set background color)
-	background_fade += elapsed / 10.0f;
-	background_fade -= std::floor(background_fade);
+	//check if game is over
+	if ((timer <= 0 || player_1.health <= 0) && enemy_1.bullet_tile_pos.y >= PPU466::ScreenHeight) {
+		if (player_1.health > 0) {
+			player_1.status = 0;
+			enemy_1.status = 2;
+		}
+		else {
+			player_1.status = 3;
+		}
+		return;
+	}
 
-	constexpr float PlayerSpeed = 30.0f;
-	if (left.pressed) player_at.x -= PlayerSpeed * elapsed;
-	if (right.pressed) player_at.x += PlayerSpeed * elapsed;
-	if (down.pressed) player_at.y -= PlayerSpeed * elapsed;
-	if (up.pressed) player_at.y += PlayerSpeed * elapsed;
+	timer = glm::max(0.0f, timer - elapsed);
+	static std::mt19937 mt;
+	//update player status
 
-	//reset button press counters:
-	left.downs = 0;
-	right.downs = 0;
-	up.downs = 0;
-	down.downs = 0;
+	if (player_1.attacked == 1) {
+		if (player_1.guard == 1) {
+			player_1.status = 2;
+			player_1.score += 1;
+			player_1.attacked = 0;
+			enemy_1.bullet_speed = 0.0f;
+			enemy_1.bullet_tile_pos.y = PPU466::ScreenHeight;
+		}
+		else {
+			if (player_1.attacked_timer >= 0.0f) {
+				player_1.attacked_timer -= elapsed;
+				player_1.status = 3;
+				enemy_1.bullet_speed = 0.0f;
+				enemy_1.bullet_tile_pos.y = PPU466::ScreenHeight;
+			}
+			else {
+				player_1.attacked_timer = 0.1f;
+				player_1.attacked = 0;
+				player_1.health -= 1;
+			}
+		}
+	}
+	else {
+		if (player_1.next_motion_timer > 0.0f) {
+			player_1.next_motion_timer -= elapsed;
+		}
+		else if (player_1.rmb_down == 1) {
+			player_1.status = 1;
+			player_1.next_motion_timer = 0.1f;
+			if (player_1.guard_timer > 0.0f && player_1.jiggle_timer <= FLT_EPSILON) {
+				player_1.guard = 1;
+			}
+			else {
+				player_1.guard = 0;
+			}
+		}
+		else{
+			player_1.status = 0;
+			player_1.guard = 0;
+			player_1.guard_timer = 0.4f;
+		}
+	}
+	if (player_1.rmb_down == 1) {
+		player_1.guard_timer  = glm::max(0.0f, player_1.guard_timer - elapsed);
+	}
+	if (player_1.jiggle_timer > 0.0f) {
+		player_1.jiggle_timer = glm::max(0.0f, player_1.jiggle_timer - elapsed);
+	}
+
+	//update enemy status
+	if (enemy_1.fire_timer > 0.0f) {
+		enemy_1.fire_timer -= elapsed;
+	}
+	if (enemy_1.next_motion_timer > 0.0f) {
+		enemy_1.next_motion_timer -= elapsed;
+	}
+	else {
+		enemy_1.status = 0;
+
+		if (enemy_1.fire_timer <= 0.0f && enemy_1.bullet_tile_pos.y >= PPU466::ScreenHeight) {
+			enemy_1.status = 1;
+			enemy_1.next_motion_timer = 1.0f;
+			enemy_1.fire_timer = (mt() / float(mt.max())) * 3.0f + 0.3f;
+			enemy_1.bullet_speed = (mt() / float(mt.max())) * 30.0f  + 10.0f;
+			enemy_1.bullet_tile_pos.y = ground_pos + 22;
+			enemy_1.bullet_tile_pos.x = enemy_1.enemy_tile_pos.x - 8;
+		}
+	}
+
+
+	if (enemy_1.bullet_tile_pos.y < PPU466::ScreenHeight) {
+		enemy_1.bullet_tile_pos.x -= 8 * enemy_1.bullet_speed * elapsed;
+		if (enemy_1.bullet_tile_pos.x - player_1.player_tile_pos.x - character_width/2 < FLT_EPSILON) {
+			player_1.attacked = 1;
+		}
+	}
 }
 
 //helper function to draw player, enemy, and bullet
@@ -269,10 +327,10 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	draw_character();
 
 	//health
-	for (int i = 0; i < player_1.health; i++) {
+	for (int i = 0; i < player_1.max_health; i++) {
 		ppu.sprites[49 + i].x = int32_t(i * 8);
 		ppu.sprites[49 + i].y = int32_t(PPU466::ScreenHeight - 8);
-		ppu.sprites[49 + i].index = SpriteTileIndex::health;
+		ppu.sprites[49 + i].index = (i < player_1.health) ? SpriteTileIndex::health : 7;
 		ppu.sprites[49 + i].attributes = SpriteTileIndex::num_health_palette;
 	}
 

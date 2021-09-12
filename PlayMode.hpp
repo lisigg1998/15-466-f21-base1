@@ -39,20 +39,27 @@ struct PlayMode : Mode {
 	//player status
 	struct Player {
 		uint8_t rmb_down = 0; //0:released, 1:pressed
-		uint8_t guard = 0;	  //0:no guard, 1:guarded, 2:guard expired
-		uint8_t status = 2;	  //0:still, 1:guard_pos, 2:deflect_pos, 3:hit_pos
+		uint8_t guard = 0;	  //0:no guard, 1:guarded
+		uint8_t status = 0;	  //0:still, 1:guard_pos, 2:deflect_pos, 3:hit_pos
+		uint8_t attacked = 0;  //0:not attacked, 1:attacked
 		static constexpr uint8_t max_health = 3;
 		uint8_t health = max_health;
 		int score = 0;
-		float guard_timer = 0.0f;
+		float guard_timer = 0.4f;
+		float attacked_timer = 0.1f;
+		float next_motion_timer = 0.0f;
+		float jiggle_timer = 0.0f;
 		glm::vec2 player_tile_pos = glm::vec2(character_width, ground_pos);
 	} player_1;
 
 	//enemy status
 	struct Enemy {
-		int status = 1; //0:still, 1:fire, 2:surrender
+		int status = 0; //0:still, 1:fire, 2:surrender
 		glm::vec2 enemy_tile_pos = glm::vec2(PPU466::ScreenWidth - 3 * character_width / 2, ground_pos);
-		glm::vec2 bullet_tile_pos = glm::vec2(PPU466::ScreenWidth/2, PPU466::ScreenHeight/2);
+		glm::vec2 bullet_tile_pos = glm::vec2(0, PPU466::ScreenHeight);
+		float next_motion_timer = 0.0f;
+		float fire_timer = 3.0f;
+		float bullet_speed = 0.0f;
 	} enemy_1;
 
 
