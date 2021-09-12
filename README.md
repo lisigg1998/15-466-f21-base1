@@ -30,7 +30,7 @@ you will lose your power temporarily and become vulnerable.
 (Just like in Sekiro: if you multi-click defense button in a very short period, your i-frames will be shortened.
 If you hold the defense button, it is not a deflection and you may still bear damages.)  
 When you successfully deflect a bullet, you gain 1 score. When you get hit, you lose 1 health.  
-The goal is to deflect bullets as many as possible, and do not lose all 3 healths.  
+The goal is to deflect bullets as many as possible within 60 seconds, and do not lose all 3 healths.  
   
 Sources:   
 https://github.com/ericeschnei/15-466-f20-base1, asset tiles 0-14, and how to organize them in PPU466.  
